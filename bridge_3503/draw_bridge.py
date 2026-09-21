@@ -22,14 +22,27 @@ PIER_X     = (15.0, 39.0, 63.0)
 BEAM_Y     = (-3.0, -1.5, 0.0, 1.5, 3.0)
 BZ         = 5.0     # низ балки
 BH         = 1.23    # высота балки
-DZ         = 6.23    # низ настилки
+DZ         = 6.33    # низ настилки
 DT         = 0.35    # толщина настилки
 
+# Сечение балки Б.140.123 по чертежу 3.503.1-81.7-1-11 (сечение А-А), метры.
+# z от нижней грани "обуви"; плита 1.40x0.15, стенка 0.16, уширение 0.59,
+# стыки - большие выпуклости; "обувь" 0.59x0.10 с обоих концов (длина 0.812).
+BEAM_R = [
+    (0.70, 1.33), (0.70, 1.18),
+    (0.62, 1.162), (0.50, 1.140), (0.40, 1.105), (0.32, 1.060), (0.25, 1.010),
+    (0.19, 0.960), (0.15, 0.920), (0.12, 0.885), (0.10, 0.860), (0.08, 0.845),
+    (0.08, 0.45),
+    (0.085, 0.440), (0.095, 0.415), (0.112, 0.385), (0.14, 0.350), (0.175, 0.315),
+    (0.215, 0.280), (0.255, 0.248), (0.285, 0.220), (0.30, 0.195),
+    (0.305, 0.165), (0.30, 0.130), (0.295, 0.10),
+]
+SHOE_L, SHOE_W, SHOE_H = 0.812, 0.295, 0.10
+
 def beam_poly(yc, zoff=0.0):
-    p = [(-0.70,1.23),(0.70,1.23),(0.70,1.05),(0.13,1.05),(0.13,0.24),(0.35,0.24),
-         (0.35,0.06),(0.18,0.06),(0.18,0.0),(-0.18,0.0),(-0.18,0.06),(-0.35,0.06),
-         (-0.35,0.24),(-0.13,0.24),(-0.13,1.05),(-0.70,1.05)]
-    return [(yc + y, zoff + z) for (y, z) in p]
+    p = [(yc + y, zoff + z) for (y, z) in BEAM_R]
+    p += [(yc - y, zoff + z) for (y, z) in reversed(BEAM_R)]
+    return p
 
 fig = plt.figure(figsize=(17.2, 10.2), dpi=150)
 gs = fig.add_gridspec(2, 2, height_ratios=[1.25, 1.0], hspace=0.30, wspace=0.14,
@@ -41,8 +54,9 @@ axP = fig.add_subplot(gs[1, 1])   # план
 fig.text(0.5, 0.965, "ПУТЕПРОВОД  15 + 24 + 24 + 15  м  ·  СЕРИЯ 3.503.1-81  ·  МАСШТАБ МОДЕЛИ 1:100",
          ha="center", va="center", fontsize=15, weight="bold", color=C_TEXT)
 fig.text(0.5, 0.933,
-         "Балки двутавровые Б2400.140.123 / Б1500.140.123 (b = 1.40 м, h = 1.23 м) · 5 балок на пролёт · "
-         "опоры — круглые стойки Ø 1.0 м, ригель и ростверк · настилка (участки омоноличивания) 0.35 м",
+         "Балки двутавровые Б2400.140.123 / Б1500.140.123 (b = 1.40 м, h = 1.23 м + обу́вь 0.10 м, "
+         "стыки — выпуклостями) · 5 балок на пролёт · опоры — круглые стойки Ø 1.0 м, ригель и ростверк · "
+         "настилка (участки омоноличивания) 0.35 м",
          ha="center", va="center", fontsize=9.5, color="#6a6254")
 
 # ================= ЭЛЕВАЦИЯ =================
@@ -68,11 +82,13 @@ for xc in PIER_X:
     axE.add_patch(Rectangle((xc - 0.5, 0.6), 1.0, 3.5, facecolor=C_FILL, edgecolor=C_EDGE, lw=1.0))
     axE.add_patch(Rectangle((xc - 0.5, 4.1), 1.0, 0.9, facecolor=C_FILL2, edgecolor=C_EDGE, lw=1.0))
 
-# балки
+# балки (тело 1,23 м + "обувь" 0,10 м с обоих концов)
 for (x0, x1) in BEAM_SPANS:
-    axE.add_patch(Rectangle((x0, BZ), x1 - x0, BH, facecolor="#e4dcbd", edgecolor=C_EDGE, lw=1.3))
-    axE.plot([x0, x1], [BZ + 1.05, BZ + 1.05], color=C_EDGE, lw=0.5, ls=(0, (4, 3)))
-    axE.plot([x0, x1], [BZ + 0.24, BZ + 0.24], color=C_EDGE, lw=0.5, ls=(0, (4, 3)))
+    axE.add_patch(Rectangle((x0, BZ + 0.10), x1 - x0, BH, facecolor="#e4dcbd", edgecolor=C_EDGE, lw=1.3))
+    axE.add_patch(Rectangle((x0, BZ), SHOE_L, SHOE_H, facecolor="#ddd5c0", edgecolor=C_EDGE, lw=1.0))
+    axE.add_patch(Rectangle((x1 - SHOE_L, BZ), SHOE_L, SHOE_H, facecolor="#ddd5c0", edgecolor=C_EDGE, lw=1.0))
+    axE.plot([x0, x1], [BZ + 1.18, BZ + 1.18], color=C_EDGE, lw=0.5, ls=(0, (4, 3)))  # низ плиты
+    axE.plot([x0, x1], [BZ + 0.10, BZ + 0.10], color=C_EDGE, lw=0.5, ls=(0, (4, 3)))  # низ уширения
 
 # настилка
 for (x0, x1) in DECK_SPANS:
@@ -117,6 +133,8 @@ axC.add_patch(Rectangle((-1.2, 4.1), 2.4, 0.9, facecolor=C_FILL2, edgecolor=C_ED
 
 # балки (5 шт.)
 for yc in BEAM_Y:
+    axC.add_patch(Rectangle((yc - SHOE_W, BZ), 2 * SHOE_W, SHOE_H,
+                            facecolor="#ddd5c0", edgecolor=C_EDGE, lw=1.0))
     axC.add_patch(Polygon(beam_poly(yc, BZ), closed=True, facecolor=C_FILL, edgecolor=C_EDGE, lw=1.1))
 
 # настилка
